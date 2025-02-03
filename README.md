@@ -1,120 +1,227 @@
-# fetch-chain
+# template-ts-single-module
 
-[![npm version](https://img.shields.io/npm/v/fetch-chain.svg)](https://www.npmjs.com/package/fetch-chain)
-[![License](https://img.shields.io/npm/l/fetch-chain.svg)](https://github.com/yourusername/fetch-chain/blob/main/LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/fetch-chain.svg)](https://www.npmjs.com/package/fetch-chain)
+A Template for a Pure TypeScript Single Module Project
 
-<!-- [![Build Status](https://github.com/yourusername/fetch-chain/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/fetch-chain/actions) -->
+# package.json
 
-`fetch-chain`은 인터셉터를 지원하는 HTTP 클라이언트 라이브러리입니다.
-실제 호출은 브라우저 또는 `node18` 이상의 `fetch` API를 사용합니다.
+## `type`
 
-# 주요기능
+`type` specifies the module system.
 
-- `fetch` 스펙을 그대로 지원
-- baseURL 설정 지원
-- 인터셉터를 통한 요청 및 응답 가로채기, 수정
+- `module`: ECMAScript modules
+- `commonjs`: CommonJS modules
 
-# 설치
+However, `tsup` is used for building, so `type` is set to `module` by default.
+`tsup` will generate `.js` files for `esm` and `.cjs` files for `commonjs`.
+
+> When setting `type` to `commonjs`, `tsup` will generate `.js` files for `commonjs` and `.mjs` files for `esm`.
+
+| type       | `.js`file | `.cjs`file | `.mjs`file |
+| :--------- | :-------- | :--------- | :--------- |
+| `module`   | `esm`     | `cjs`      | -          |
+| `commonjs` | `cjs`     | -          | `esm`      |
+
+# tsconfig.json
+
+> This section only explains options that affect the build output.
+
+## `compilerOptions.target`
+
+> `es2017` is set as the default value.
+
+The `target` option is used to specify which JavaScript version your code will be compiled to for the execution environment.
+
+The following is `TypeScript` source code.
+
+```typescript
+// src/index.mts
+const main = async (...args: (string | object)[]) => {
+  console.log(args);
+};
+```
+
+The `target` to equal or greater than `es2017(es8)`:
+
+```javascript
+// dist/index.js
+var main = async (...args) => {
+  console.log(args);
+};
+```
+
+When you set the `target` to a version lower than `es2017(es8)`, such as `es2016(es7)` or `es2015(es6)`:
+
+```javascript
+// dist/index.js
+var __async = (__this, __arguments, generator) => {
+  return new Promise((resolve, reject) => {
+    var fulfilled = (value) => {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var rejected = (value) => {
+      try {
+        step(generator.throw(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var step = (x) =>
+      x.done
+        ? resolve(x.value)
+        : Promise.resolve(x.value).then(fulfilled, rejected);
+    step((generator = generator.apply(__this, __arguments)).next());
+  });
+};
+
+// src/index.mts
+var main = (...args) =>
+  __async(void 0, null, function* () {
+    console.log(args);
+  });
+```
+
+If you'd like to use `es5` target, `@swc/core` is required.
+
+> The build output will be 143 lines of code to support es5.
 
 ```bash
-npm install fetch-chain
+pnpm add -D @swc/core
+pnpm build
 ```
 
-# 기본 사용법
+## `compilerOptions.module`
 
-특정 원격 서버에 대한 요청을 처리하는 클라이언트를 생성합니다.
+> `esnext` is set as the default value.
 
-`baseURL` 을 지정해서 요청을 보낼 서버를 지정합니다.
+The `module` option affects both development code and build output.
+
+### Module: `commonjs
+
+Development code:
 
 ```typescript
-// 생성
-const client = buildClient().baseURL("https://api.example.com").build();
+const { useState } = require("react");
+module.exports.MyComponent = () => {
+  // ...
+};
+```
 
-// GET 요청
-const response = await client.fetch("/users");
+Build output:
 
-// POST 요청
-const response = await client.fetch("/users", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
+```javascript
+const react_1 = require("react");
+exports.MyComponent = () => {
+  // ...
+};
+```
+
+### Module: `esnext`
+
+Development code:
+
+```typescript
+import { useState } from "react";
+export const MyComponent = () => {
+  // ...
+};
+```
+
+Build output:
+
+```javascript
+import { useState } from "react";
+export const MyComponent = () => {
+  // ...
+};
+```
+
+## `compilerOptions.moduleResolution`
+
+> `node` is set as the default value.
+
+The `moduleResolution` option determines how TypeScript resolves files when it encounters import statements.
+
+### Why "bundler" is better than "node"
+
+- Stricter module resolution rules prevent ambiguous imports
+- Better performance in file resolution
+- Full support for package.json `exports` field
+- Better subpath imports handling
+- Clearer error messages for module resolution issues
+- More efficient type definition resolution
+
+```typescript
+// bundler does not allow ambiguous imports like the below.
+import { something } from "my-package/dist/utils"; // ❌
+import { something } from "my-package/utils"; // ✅
+```
+
+> Note: Use "node" resolution when you need to support legacy packages that don't have package.json `exports` field.
+
+# eslint for browser
+
+First, install the `globals` package.
+
+```bash
+pnpm add -D globals
+```
+
+Then, add globals to eslint config.
+
+```typescript
+// .eslint.config.ts
+import globals from "globals";
+
+export default tseslint.config(
+  // ... exists config
+  {
+    globals: globals.browser,
   },
-  body: JSON.stringify({ name: "홍길동" }),
+);
+```
+
+# Testing in Browser Environment
+
+First, install the `jsdom` package:
+
+```bash
+pnpm add -D jsdom
+```
+
+Then, update the environment setting in your vitest config:
+
+```typescript:vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: "jsdom", // Changed from 'node' to 'jsdom'
+    testTimeout: 10000,
+  },
 });
 ```
 
-# 인터셉터
+This configuration allows you to run tests that require browser APIs.
 
-인터셉터를 등록해서 요청 및 응답을 가로채고 수정할 수 있습니다.
+# devDependencies
 
-```typescript
-const client = buildClient()
-  .baseURL("https://api.example.com")
-  .addInterceptor((chain) => {
-    const request = chain.request();
-    const init = chain.init();
-    // 여기서 요청을 가로채서 수정합니다.
-    const newInit = {
-      ...init,
-      headers: { ...init?.headers, Accept: "application/json" },
-    };
-    const response = await chain.proceed(request, newInit);
-    // 여기서 응답을 가로채서 수정합니다.
-    return response;
-  })
-  .build();
-
-// 이 요청은 헤더에 Accept: application/json 이 추가되어 요청됩니다.
-const response = await client.fetch("/users");
-```
-
-# 실행기
-
-`fetch-chain` 은 기본적으로 `fetch` API를 사용해서 요청을 처리합니다.
-다른 요청 모듈을 사용하고 싶다면 `executor` 를 지정해서 사용할 수 있습니다.
-
-```typescript
-const client = buildClient()
-  .executor((request: RequestInfo | URL, init?: RequestInit) => {
-    // 여기서 실제 HTTP 요청을 처리하고 Response 객체를 반환합니다.
-    // 예: axios, fetch, 등등
-    return await fetch(request, init);
-  })
-  .build();
-```
-
-# URL 처리 방식
-
-FetchChainClient는 baseURL과 요청 경로를 자동으로 결합합니다:
-
-```typescript
-const client = buildClient().baseURL("https://api.example.com").build();
-
-// https://api.example.com/users 로 요청됨
-await client.fetch("/users");
-
-// https://api.example.com/users/123 로 요청됨
-await client.fetch("/users/123");
-
-// 절대 URL을 사용하는 경우 baseURL은 무시됨
-await client.fetch("https://another-api.com/posts");
-```
-
-# init 옵션 사용
-
-fetch API의 모든 표준 옵션을 지원합니다:
-
-```typescript
-const response = await client.fetch("/users", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: "Bearer token",
-  },
-  body: JSON.stringify({ name: "홍길동" }),
-  mode: "cors",
-  cache: "no-cache",
-  credentials: "same-origin",
-});
-```
+- [@types/node](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node)
+- [@typescript-eslint/eslint-plugin](https://github.com/typescript-eslint/typescript-eslint)
+- [@typescript-eslint/parser](https://github.com/typescript-eslint/typescript-eslint)
+- [@vitest/coverage-v8](https://github.com/vitest-dev/coverage-v8)
+- [eslint](https://eslint.org/)
+- [eslint-config-prettier](https://github.com/prettier/eslint-config-prettier) - Configuration to prevent conflicts between ESLint and Prettier
+- [eslint-plugin-prettier](https://github.com/prettier/eslint-plugin-prettier) - Runs Prettier as an ESLint rule
+- [jiti](https://github.com/unjs/jiti) - Runtime TypeScript executor with TypeScript and ESM support
+- [prettier](https://prettier.io/)
+- [rimraf](https://github.com/jprichardson/node-rimraf)
+- [ts-node](https://github.com/TypeStrong/ts-node)
+- [tsup](https://tsup.egoist.dev/)
+- [typescript](https://www.typescriptlang.org/)
+- [typescript-eslint](https://typescript-eslint.io/) - Collection of ESLint plugins and parsers for TypeScript
+- [vitest](https://vitest.dev/)
