@@ -1,8 +1,8 @@
-import fs from "fs";
+import { test } from "./utils/test-util";
 
 const main = async (...args: (string | object)[]) => {
-  fs.readFileSync("package.json");
-  console.log(args);
+  // import test
+  test(...args);
 };
 
 main("Hello World");

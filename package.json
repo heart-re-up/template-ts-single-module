@@ -20,8 +20,10 @@
 		"test": "vitest",
 		"test:watch": "vitest --watch",
 		"test:coverage": "vitest --coverage",
-		"dev": "node src/index.mts",
-		"build": "rimraf dist && tsup --config tsup.config.ts",
+		"dev": "node dist/index.js",
+		"build": "rimraf dist && tsup --config tsup.config.build.ts",
+		"build:sample": "rimraf dist-sample && tsup --config tsup.config.sample.ts",
+		"sample": "pnpm build:sample && node dist-sample/index.js",
 		"prepare": "pnpm build",
 		"lint": "eslint src --config eslint.config.ts",
 		"format": "prettier --write \"src/**/*.ts\""
